@@ -1,6 +1,6 @@
 "use client";
 
-import Navbar from "../../components/Navbar";
+import Navbar from "../../../components/Navbar";
 
 import {
   ArrowLeft,
@@ -22,7 +22,7 @@ import {
   classes,
   characterLevels,
   races,
-} from "../../data/characterData";
+} from "../../../data/characterData";
 
 const steps = ["Basic Info", "Race & Class", "Abilities", "Background"];
 
