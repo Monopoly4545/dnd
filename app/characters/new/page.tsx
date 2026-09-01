@@ -1,5 +1,7 @@
 "use client";
 
+import Navbar from "../../../components/Navbar";
+
 import {
   ArrowLeft,
   ArrowRight,
@@ -20,14 +22,9 @@ import {
   classes,
   characterLevels,
   races,
-} from "../../data/characterData";
+} from "../../../data/characterData";
 
-const steps = [
-  "Basic Info",
-  "Race & Class",
-  "Abilities",
-  "Background",
-];
+const steps = ["Basic Info", "Race & Class", "Abilities", "Background"];
 
 type Abilities = {
   STR: number;
@@ -78,10 +75,7 @@ export default function CreateCharacter() {
   /* Update Character                  */
   /* -------------------------------- */
 
-  const updateCharacter = (
-    key: keyof Character,
-    value: string | number,
-  ) => {
+  const updateCharacter = (key: keyof Character, value: string | number) => {
     setCharacter((current) => ({
       ...current,
       [key]: value,
@@ -94,10 +88,7 @@ export default function CreateCharacter() {
   /* Update Ability                   */
   /* -------------------------------- */
 
-  const updateAbility = (
-    ability: keyof Abilities,
-    value: number,
-  ) => {
+  const updateAbility = (ability: keyof Abilities, value: number) => {
     setCharacter((current) => ({
       ...current,
       abilities: {
@@ -151,9 +142,7 @@ export default function CreateCharacter() {
     if (step === 2) {
       const abilities = Object.values(character.abilities);
 
-      const invalid = abilities.some(
-        (value) => value < 1 || value > 30,
-      );
+      const invalid = abilities.some((value) => value < 1 || value > 30);
 
       if (invalid) {
         setError("Ability scores must be between 1 and 30.");
@@ -202,37 +191,49 @@ export default function CreateCharacter() {
   /* Finish Character                 */
   /* -------------------------------- */
 
-  const finishCharacter = () => {
+  const [saving, setSaving] = useState(false);
+
+  const finishCharacter = async () => {
     if (!validateStep()) {
       return;
     }
 
-    /*
-     * For now we store the character temporarily.
-     *
-     * Later, replace this with:
-     *
-     * fetch("/api/characters", {
-     *   method: "POST",
-     *   headers: {
-     *     "Content-Type": "application/json",
-     *   },
-     *   body: JSON.stringify(character),
-     * });
-     */
+    setError("");
+    setSaving(true);
 
-    sessionStorage.setItem(
-      "new-character",
-      JSON.stringify(character),
-    );
+    try {
+      const response = await fetch("/api/characters", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(character),
+      });
 
-    router.push("/characters");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create character");
+      }
+
+      console.log("Character created:", data);
+
+      router.push("/characters");
+    } catch (error) {
+      console.error("Error creating character:", error);
+
+      setError(
+        error instanceof Error ? error.message : "Failed to create character.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <main className="min-h-screen bg-[#0b0908] px-6 pb-20 pt-32 text-stone-100">
+      <Navbar />
       <div className="mx-auto max-w-5xl">
-
         {/* ============================== */}
         {/* HEADER                         */}
         {/* ============================== */}
@@ -281,11 +282,7 @@ export default function CreateCharacter() {
                             : "border-stone-700 text-stone-600"
                       }`}
                     >
-                      {completed ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        index + 1
-                      )}
+                      {completed ? <Check className="h-4 w-4" /> : index + 1}
                     </div>
 
                     <span
@@ -305,9 +302,7 @@ export default function CreateCharacter() {
                   {index !== steps.length - 1 && (
                     <div
                       className={`mx-3 mt-[-20px] h-px flex-1 transition ${
-                        index < step
-                          ? "bg-amber-500"
-                          : "bg-stone-800"
+                        index < step ? "bg-amber-500" : "bg-stone-800"
                       }`}
                     />
                   )}
@@ -322,12 +317,9 @@ export default function CreateCharacter() {
         {/* ============================== */}
 
         <div className="overflow-hidden rounded-2xl border border-stone-800 bg-[#12100f] shadow-2xl shadow-black/20">
-
           {/* Form Header */}
           <div className="border-b border-stone-800 px-6 py-5 sm:px-8">
-            <h2 className="font-serif text-xl font-bold">
-              {steps[step]}
-            </h2>
+            <h2 className="font-serif text-xl font-bold">{steps[step]}</h2>
 
             <p className="mt-1 text-sm text-stone-600">
               Step {step + 1} of {steps.length}
@@ -336,14 +328,12 @@ export default function CreateCharacter() {
 
           {/* Form Content */}
           <div className="min-h-[400px] p-6 sm:p-8">
-
             {/* ========================== */}
             {/* STEP 1 - BASIC INFO         */}
             {/* ========================== */}
 
             {step === 0 && (
               <div className="mx-auto max-w-xl space-y-7">
-
                 {/* Name */}
                 <div>
                   <label
@@ -357,12 +347,7 @@ export default function CreateCharacter() {
                     id="character-name"
                     type="text"
                     value={character.name}
-                    onChange={(e) =>
-                      updateCharacter(
-                        "name",
-                        e.target.value,
-                      )
-                    }
+                    onChange={(e) => updateCharacter("name", e.target.value)}
                     placeholder="e.g. Aldric Stormborn"
                     className="w-full rounded-lg border border-stone-800 bg-[#0d0b0a] px-4 py-3 text-sm text-stone-200 outline-none transition placeholder:text-stone-700 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
                   />
@@ -370,15 +355,11 @@ export default function CreateCharacter() {
 
                 {/* Level + Alignment */}
                 <div className="grid gap-5 sm:grid-cols-2">
-
                   <SelectField
                     label="Level"
                     value={String(character.level)}
                     onChange={(value) =>
-                      updateCharacter(
-                        "level",
-                        Number(value),
-                      )
+                      updateCharacter("level", Number(value))
                     }
                     options={characterLevels.map(String)}
                     placeholder="Choose level"
@@ -387,16 +368,10 @@ export default function CreateCharacter() {
                   <SelectField
                     label="Alignment"
                     value={character.alignment}
-                    onChange={(value) =>
-                      updateCharacter(
-                        "alignment",
-                        value,
-                      )
-                    }
+                    onChange={(value) => updateCharacter("alignment", value)}
                     options={alignments}
                     placeholder="Choose alignment"
                   />
-
                 </div>
 
                 {/* Info */}
@@ -410,15 +385,13 @@ export default function CreateCharacter() {
                       </p>
 
                       <p className="mt-1 text-sm leading-6 text-stone-500">
-                        Give your character a name, level,
-                        and alignment. You can customize their
-                        race, class, abilities, and background
-                        in the next steps.
+                        Give your character a name, level, and alignment. You
+                        can customize their race, class, abilities, and
+                        background in the next steps.
                       </p>
                     </div>
                   </div>
                 </div>
-
               </div>
             )}
 
@@ -428,15 +401,12 @@ export default function CreateCharacter() {
 
             {step === 1 && (
               <div className="grid gap-8 md:grid-cols-2">
-
                 <SelectionGrid
                   title="Choose Your Race"
                   icon={<Shield className="h-5 w-5" />}
                   options={races}
                   value={character.race}
-                  onChange={(value) =>
-                    updateCharacter("race", value)
-                  }
+                  onChange={(value) => updateCharacter("race", value)}
                 />
 
                 <SelectionGrid
@@ -444,11 +414,8 @@ export default function CreateCharacter() {
                   icon={<Swords className="h-5 w-5" />}
                   options={classes}
                   value={character.class}
-                  onChange={(value) =>
-                    updateCharacter("class", value)
-                  }
+                  onChange={(value) => updateCharacter("class", value)}
                 />
-
               </div>
             )}
 
@@ -458,7 +425,6 @@ export default function CreateCharacter() {
 
             {step === 2 && (
               <div>
-
                 <div className="mb-8 text-center">
                   <Dices className="mx-auto h-8 w-8 text-amber-400" />
 
@@ -473,8 +439,7 @@ export default function CreateCharacter() {
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {abilityScores.map(({ name, short }) => {
-                    const ability =
-                      short as keyof Abilities;
+                    const ability = short as keyof Abilities;
 
                     return (
                       <div
@@ -495,10 +460,7 @@ export default function CreateCharacter() {
                           min={1}
                           max={30}
                           onChange={(e) =>
-                            updateAbility(
-                              ability,
-                              Number(e.target.value),
-                            )
+                            updateAbility(ability, Number(e.target.value))
                           }
                           className="mx-auto mt-4 block w-20 rounded-lg border border-stone-800 bg-[#171311] px-3 py-3 text-center text-xl font-bold text-amber-400 outline-none transition focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
                         />
@@ -506,7 +468,6 @@ export default function CreateCharacter() {
                     );
                   })}
                 </div>
-
               </div>
             )}
 
@@ -516,17 +477,11 @@ export default function CreateCharacter() {
 
             {step === 3 && (
               <div className="mx-auto max-w-xl space-y-7">
-
                 {/* Background */}
                 <SelectField
                   label="Background"
                   value={character.background}
-                  onChange={(value) =>
-                    updateCharacter(
-                      "background",
-                      value,
-                    )
-                  }
+                  onChange={(value) => updateCharacter("background", value)}
                   options={backgrounds}
                   placeholder="Choose background"
                 />
@@ -544,20 +499,13 @@ export default function CreateCharacter() {
                     id="character-story"
                     rows={7}
                     value={character.story}
-                    onChange={(e) =>
-                      updateCharacter(
-                        "story",
-                        e.target.value,
-                      )
-                    }
+                    onChange={(e) => updateCharacter("story", e.target.value)}
                     placeholder="Tell us about your character..."
                     className="w-full resize-none rounded-lg border border-stone-800 bg-[#0d0b0a] px-4 py-3 text-sm text-stone-300 outline-none transition placeholder:text-stone-700 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
                   />
                 </div>
-
               </div>
             )}
-
           </div>
 
           {/* ============================== */}
@@ -566,9 +514,7 @@ export default function CreateCharacter() {
 
           {error && (
             <div className="border-t border-red-500/10 bg-red-500/5 px-6 py-4 sm:px-8">
-              <p className="text-sm text-red-400">
-                {error}
-              </p>
+              <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
 
@@ -577,7 +523,6 @@ export default function CreateCharacter() {
           {/* ============================== */}
 
           <div className="flex items-center justify-between border-t border-stone-800 px-6 py-5 sm:px-8">
-
             {/* Back */}
             <button
               type="button"
@@ -597,21 +542,20 @@ export default function CreateCharacter() {
                 className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-6 py-3 text-sm font-semibold text-stone-950 transition hover:bg-amber-400"
               >
                 Continue
-
                 <ArrowRight className="h-4 w-4" />
               </button>
             ) : (
               <button
                 type="button"
                 onClick={finishCharacter}
-                className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-6 py-3 text-sm font-semibold text-stone-950 transition hover:bg-amber-400"
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-6 py-3 text-sm font-semibold text-stone-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Finish Character
+                {saving ? "Forging..." : "Finish Character"}
 
                 <Swords className="h-4 w-4" />
               </button>
             )}
-
           </div>
         </div>
       </div>
@@ -639,15 +583,11 @@ function SelectionGrid({
   return (
     <div>
       <div className="mb-5 flex items-center gap-3">
-
         <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/5 text-amber-400">
           {icon}
         </div>
 
-        <h3 className="font-serif text-lg font-bold">
-          {title}
-        </h3>
-
+        <h3 className="font-serif text-lg font-bold">{title}</h3>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
