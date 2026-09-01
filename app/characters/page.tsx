@@ -188,7 +188,7 @@ export default function CharacterList() {
           </div>
 
           <Link
-            href="/create"
+            href="/characters/new"
             className="inline-flex w-fit items-center gap-2 rounded-lg bg-amber-500 px-5 py-3 text-sm font-semibold text-stone-950 transition hover:bg-amber-400"
           >
             <Plus className="h-4 w-4" />
@@ -265,7 +265,7 @@ export default function CharacterList() {
                 key={character.id}
                 character={character}
                 onDelete={deleteCharacter}
-                onOpen={() => router.push(`/character/${character.id}`)}
+                onOpen={() => router.push(`/characters/${character.id}`)}
               />
             ))}
           </div>

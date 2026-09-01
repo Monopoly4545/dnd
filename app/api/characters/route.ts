@@ -1,6 +1,29 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 
+type CreateCharacterBody = {
+  name?: string;
+  race?: string;
+  class?: string;
+  level?: number;
+  alignment?: string;
+  background?: string;
+  abilities?: {
+    STR?: number;
+    DEX?: number;
+    CON?: number;
+    INT?: number;
+    WIS?: number;
+    CHA?: number;
+  };
+  story?: string;
+};
+
+/**
+ * GET /api/characters
+ *
+ * Get all characters.
+ */
 export async function GET() {
   try {
     const characters = await query(`
@@ -27,22 +50,25 @@ export async function GET() {
 
     return NextResponse.json(characters);
   } catch (error) {
-    console.error("Error fetching characters:", error);
+    console.error("GET /api/characters error:", error);
 
     return NextResponse.json(
       {
-        error: "Failed to fetch characters",
+        error: "Failed to fetch characters.",
       },
-      {
-        status: 500,
-      },
+      { status: 500 },
     );
   }
 }
 
+/**
+ * POST /api/characters
+ *
+ * Create a new character.
+ */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body: CreateCharacterBody = await request.json();
 
     const {
       name,
@@ -55,40 +81,69 @@ export async function POST(request: Request) {
       story,
     } = body;
 
-    if (!name?.trim()) {
+    // --------------------------------
+    // Validation
+    // --------------------------------
+
+    if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
-        { error: "Character name is required." },
+        {
+          error: "Character name is required.",
+        },
         { status: 400 },
       );
     }
 
-    if (!race) {
+    if (!race || typeof race !== "string") {
       return NextResponse.json(
-        { error: "Race is required." },
+        {
+          error: "Race is required.",
+        },
         { status: 400 },
       );
     }
 
-    if (!characterClass) {
+    if (!characterClass || typeof characterClass !== "string") {
       return NextResponse.json(
-        { error: "Class is required." },
+        {
+          error: "Class is required.",
+        },
         { status: 400 },
       );
     }
 
-    if (!alignment) {
+    if (!alignment || typeof alignment !== "string") {
       return NextResponse.json(
-        { error: "Alignment is required." },
+        {
+          error: "Alignment is required.",
+        },
         { status: 400 },
       );
     }
 
-    if (!background) {
+    if (!background || typeof background !== "string") {
       return NextResponse.json(
-        { error: "Background is required." },
+        {
+          error: "Background is required.",
+        },
         { status: 400 },
       );
     }
+
+    // --------------------------------
+    // Ability scores
+    // --------------------------------
+
+    const strength = Number(abilities?.STR ?? 10);
+    const dexterity = Number(abilities?.DEX ?? 10);
+    const constitution = Number(abilities?.CON ?? 10);
+    const intelligence = Number(abilities?.INT ?? 10);
+    const wisdom = Number(abilities?.WIS ?? 10);
+    const charisma = Number(abilities?.CHA ?? 10);
+
+    // --------------------------------
+    // Insert
+    // --------------------------------
 
     const rows = await query(
       `
@@ -122,21 +177,37 @@ export async function POST(request: Request) {
         $12,
         $13
       )
-      RETURNING *
+      RETURNING
+        id,
+        name,
+        race,
+        class,
+        level,
+        alignment,
+        background,
+        strength,
+        dexterity,
+        constitution,
+        intelligence,
+        wisdom,
+        charisma,
+        story,
+        created_at,
+        updated_at
       `,
       [
         name.trim(),
         race,
         characterClass,
-        level,
+        level ?? 1,
         alignment,
         background,
-        abilities?.STR ?? 10,
-        abilities?.DEX ?? 10,
-        abilities?.CON ?? 10,
-        abilities?.INT ?? 10,
-        abilities?.WIS ?? 10,
-        abilities?.CHA ?? 10,
+        strength,
+        dexterity,
+        constitution,
+        intelligence,
+        wisdom,
+        charisma,
         story?.trim() || null,
       ],
     );
@@ -145,15 +216,13 @@ export async function POST(request: Request) {
       status: 201,
     });
   } catch (error) {
-    console.error("Error creating character:", error);
+    console.error("POST /api/characters error:", error);
 
     return NextResponse.json(
       {
         error: "Failed to create character.",
       },
-      {
-        status: 500,
-      },
+      { status: 500 },
     );
   }
 }

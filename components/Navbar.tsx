@@ -45,7 +45,7 @@ export default function Navbar() {
             </Link>
 
             <Link
-              href="/create"
+              href="/characters/new"
               className="text-sm text-stone-400 transition hover:text-amber-400"
             >
               Create
