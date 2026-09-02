@@ -14,15 +14,22 @@ type Character = {
   level: number;
   alignment: string;
   background: string;
-  abilities: {
-    STR: number;
-    DEX: number;
-    CON: number;
-    INT: number;
-    WIS: number;
-    CHA: number;
-  };
+
+  strength: number;
+  dexterity: number;
+  constitution: number;
+  intelligence: number;
+  wisdom: number;
+  charisma: number;
+
+  inspiration: boolean;
+  speed: number;
+  temporary_hit_points: number;
+
   story: string;
+
+  created_at: string;
+  updated_at: string;
 };
 
 export default function CharacterList() {
