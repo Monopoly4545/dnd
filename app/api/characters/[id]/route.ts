@@ -1,28 +1,11 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import type { CreateCharacterInput, Abilities } from "@/types/type";
 
 type RouteContext = {
   params: Promise<{
     id: string;
   }>;
-};
-
-type CharacterBody = {
-  name?: string;
-  race?: string;
-  class?: string;
-  level?: number;
-  alignment?: string;
-  background?: string;
-  abilities?: {
-    STR?: number;
-    DEX?: number;
-    CON?: number;
-    INT?: number;
-    WIS?: number;
-    CHA?: number;
-  };
-  story?: string | null;
 };
 
 /**
@@ -104,7 +87,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const body: CharacterBody = await request.json();
+    const body: CreateCharacterInput = await request.json();
 
     if (!id) {
       return NextResponse.json(
@@ -278,7 +261,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const body: CharacterBody = await request.json();
+    const body: Partial<CreateCharacterInput> = await request.json();
 
     if (!id) {
       return NextResponse.json(
@@ -361,7 +344,7 @@ export async function PATCH(
         ? body.background
         : existing.background;
 
-    const abilities = body.abilities ?? {};
+    const abilities: Partial<Abilities> = body.abilities ?? {};
 
     const strength =
       abilities.STR !== undefined

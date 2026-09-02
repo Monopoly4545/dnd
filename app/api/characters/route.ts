@@ -1,23 +1,6 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-
-type CreateCharacterBody = {
-  name?: string;
-  race?: string;
-  class?: string;
-  level?: number;
-  alignment?: string;
-  background?: string;
-  abilities?: {
-    STR?: number;
-    DEX?: number;
-    CON?: number;
-    INT?: number;
-    WIS?: number;
-    CHA?: number;
-  };
-  story?: string;
-};
+import type { CreateCharacterInput, Abilities } from "@/types/type";
 
 /**
  * GET /api/characters
@@ -68,7 +51,7 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const body: CreateCharacterBody = await request.json();
+    const body: CreateCharacterInput = await request.json();
 
     const {
       name,
