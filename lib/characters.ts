@@ -1,48 +1,8 @@
-export type CharacterAbilities = {
-  STR: number;
-  DEX: number;
-  CON: number;
-  INT: number;
-  WIS: number;
-  CHA: number;
-};
-
-export type Character = {
-  id: string;
-  name: string;
-  race: string;
-  class: string;
-  level: number;
-  alignment: string;
-  background: string;
-
-  strength: number;
-  dexterity: number;
-  constitution: number;
-  intelligence: number;
-  wisdom: number;
-  charisma: number;
-
-  inspiration: boolean;
-  speed: number;
-  temporary_hit_points: number;
-
-  story: string;
-
-  created_at: string;
-  updated_at: string;
-};
-
-export type CreateCharacterInput = {
-  name: string;
-  race: string;
-  class: string;
-  level: number;
-  alignment: string;
-  background: string;
-  abilities: CharacterAbilities;
-  story?: string;
-};
+import type {
+  Character,
+  CreateCharacterInput,
+  DeleteCharacterResponse,
+} from "@/types/type";
 
 async function parseResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get("content-type");
@@ -142,14 +102,9 @@ export async function patchCharacter(
 /**
  * DELETE
  */
-export async function deleteCharacter(id: string): Promise<{
-  success: boolean;
-  message: string;
-  character: {
-    id: string;
-    name: string;
-  };
-}> {
+export async function deleteCharacter(
+  id: string,
+): Promise<DeleteCharacterResponse> {
   const response = await fetch(`/api/characters/${id}`, {
     method: "DELETE",
   });

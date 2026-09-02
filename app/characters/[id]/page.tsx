@@ -11,34 +11,7 @@ import {
   Trash2,
   Zap,
 } from "lucide-react";
-
-type AbilityKey = "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
-
-type Character = {
-  id: string;
-  name: string;
-  race: string;
-  class: string;
-  level: number;
-  alignment: string;
-  background: string;
-
-  strength: number;
-  dexterity: number;
-  constitution: number;
-  intelligence: number;
-  wisdom: number;
-  charisma: number;
-
-  inspiration: boolean;
-  speed: number;
-  temporary_hit_points: number;
-
-  story: string;
-
-  created_at: string;
-  updated_at: string;
-};
+import type { Character, AbilityKey } from "@/types/type";
 
 type Skill = {
   name: string;

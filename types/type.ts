@@ -8,6 +8,11 @@ export type AbilityKey = "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
 
 export type Abilities = Record<AbilityKey, number>;
 
+export type AbilityScore = {
+  name: string;
+  short: AbilityKey;
+};
+
 
 // ============================================================
 // Character
@@ -22,6 +27,7 @@ export type Character = {
   alignment: string;
   background: string;
 
+  // Individual ability scores (database columns)
   strength: number;
   dexterity: number;
   constitution: number;
@@ -29,14 +35,26 @@ export type Character = {
   wisdom: number;
   charisma: number;
 
+  // Character stats
   inspiration: boolean;
   speed: number;
   temporary_hit_points: number;
 
+  // Flavor
   story: string;
 
+  // Timestamps
   created_at: string;
   updated_at: string;
+};
+
+
+// ============================================================
+// Character with Abilities (for UI)
+// ============================================================
+
+export type CharacterWithAbilities = Character & {
+  abilities: Abilities;
 };
 
 
@@ -46,18 +64,13 @@ export type Character = {
 
 export type CreateCharacterInput = {
   name: string;
-
   race: string;
   class: string;
-
   level: number;
-
   alignment: string;
   background: string;
-
   abilities: Abilities;
-
-  story: string;
+  story?: string;
 };
 
 
@@ -65,7 +78,9 @@ export type CreateCharacterInput = {
 // Character Update
 // ============================================================
 
-export type UpdateCharacterInput = Partial<CreateCharacterInput>;
+export type UpdateCharacterInput = Partial<Omit<CreateCharacterInput, 'abilities'>> & {
+  abilities?: Abilities;
+};
 
 
 // ============================================================
@@ -88,6 +103,15 @@ export type CharactersResponse = ApiResponse<Character[]>;
 
 export type CharacterResponse = ApiResponse<Character>;
 
+export type DeleteCharacterResponse = {
+  success: boolean;
+  message: string;
+  character: {
+    id: string;
+    name: string;
+  };
+};
+
 
 // ============================================================
 // Character Form
@@ -95,17 +119,12 @@ export type CharacterResponse = ApiResponse<Character>;
 
 export type CharacterFormData = {
   name: string;
-
   race: string;
   class: string;
-
   level: number;
-
   alignment: string;
   background: string;
-
   abilities: Abilities;
-
   story: string;
 };
 
@@ -124,29 +143,29 @@ export type CharacterStepIndex = 0 | 1 | 2 | 3;
 
 
 // ============================================================
-// D&D Options
+// D&D Options (Data Types)
 // ============================================================
 
-export type Race = {
-  id?: string;
+export type RaceOption = {
+  id: string;
   name: string;
   description?: string;
 };
 
-export type CharacterClass = {
-  id?: string;
+export type ClassOption = {
+  id: string;
   name: string;
   description?: string;
 };
 
-export type Background = {
-  id?: string;
+export type BackgroundOption = {
+  id: string;
   name: string;
   description?: string;
 };
 
-export type Alignment = {
-  id?: string;
+export type AlignmentOption = {
+  id: string;
   name: string;
   description?: string;
 };
@@ -191,11 +210,7 @@ export type Size = "sm" | "md" | "lg";
 // Loading / Status
 // ============================================================
 
-export type LoadingState =
-  | "idle"
-  | "loading"
-  | "success"
-  | "error";
+export type LoadingState = "idle" | "loading" | "success" | "error";
 
 
 // ============================================================

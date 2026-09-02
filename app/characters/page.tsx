@@ -5,32 +5,7 @@ import { ArrowRight, Plus, Search, Shield, Swords, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-
-type Character = {
-  id: string;
-  name: string;
-  race: string;
-  class: string;
-  level: number;
-  alignment: string;
-  background: string;
-
-  strength: number;
-  dexterity: number;
-  constitution: number;
-  intelligence: number;
-  wisdom: number;
-  charisma: number;
-
-  inspiration: boolean;
-  speed: number;
-  temporary_hit_points: number;
-
-  story: string;
-
-  created_at: string;
-  updated_at: string;
-};
+import type { Character, AbilityKey } from "@/types/type";
 
 export default function CharacterList() {
   const router = useRouter();
@@ -67,16 +42,21 @@ export default function CharacterList() {
           alignment: character.alignment ?? "",
           background: character.background ?? "",
 
-          abilities: {
-            STR: character.strength,
-            DEX: character.dexterity,
-            CON: character.constitution,
-            INT: character.intelligence,
-            WIS: character.wisdom,
-            CHA: character.charisma,
-          },
+          strength: character.strength,
+          dexterity: character.dexterity,
+          constitution: character.constitution,
+          intelligence: character.intelligence,
+          wisdom: character.wisdom,
+          charisma: character.charisma,
+
+          inspiration: character.inspiration ?? false,
+          speed: character.speed ?? 30,
+          temporary_hit_points: character.temporary_hit_points ?? 0,
 
           story: character.story ?? "",
+
+          created_at: character.created_at,
+          updated_at: character.updated_at,
         }));
 
         setCharacters(mappedCharacters);
@@ -238,7 +218,7 @@ export default function CharacterList() {
             </p>
 
             <Link
-              href="/create"
+              href="/characters/new"
               className="mt-7 inline-flex items-center gap-2 rounded-lg bg-amber-500 px-6 py-3 text-sm font-semibold text-stone-950 transition hover:bg-amber-400"
             >
               <Plus className="h-4 w-4" />
