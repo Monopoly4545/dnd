@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import type { CreateCharacterInput, Abilities } from "@/types/type";
+import { getCurrentUser, checkCharacterOwnership } from "@/lib/authHelpers";
+import type { CreateCharacterInput, Abilities, ApiResponse, DeleteCharacterResponse } from "@/types/type";
 
 type RouteContext = {
   params: Promise<{
@@ -11,20 +12,24 @@ type RouteContext = {
 /**
  * GET /api/characters/:id
  *
- * Get a single character.
+ * Get a single character (must belong to authenticated user).
  */
-export async function GET(
-  _request: Request,
-  { params }: RouteContext,
-) {
+export async function GET(request: Request, { params }: RouteContext) {
   try {
+    const user = await getCurrentUser(request);
+
+    if (!user) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
     const { id } = await params;
 
     if (!id) {
-      return NextResponse.json(
-        {
-          error: "Character ID is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Character ID is required." },
         { status: 400 },
       );
     }
@@ -45,20 +50,22 @@ export async function GET(
         intelligence,
         wisdom,
         charisma,
+        inspiration,
+        speed,
+        temporary_hit_points,
         story,
+        user_id,
         created_at,
         updated_at
       FROM characters
-      WHERE id = $1
+      WHERE id = $1 AND user_id = $2
       `,
-      [id],
+      [id, user.id],
     );
 
     if (rows.length === 0) {
-      return NextResponse.json(
-        {
-          error: "Character not found.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Character not found." },
         { status: 404 },
       );
     }
@@ -67,10 +74,8 @@ export async function GET(
   } catch (error) {
     console.error("GET /api/characters/[id] error:", error);
 
-    return NextResponse.json(
-      {
-        error: "Failed to fetch character.",
-      },
+    return NextResponse.json<ApiResponse<null>>(
+      { success: false, error: "Failed to fetch character." },
       { status: 500 },
     );
   }
@@ -79,22 +84,35 @@ export async function GET(
 /**
  * PUT /api/characters/:id
  *
- * Replace/update the entire character.
+ * Replace/update the entire character (must belong to authenticated user).
  */
-export async function PUT(
-  request: Request,
-  { params }: RouteContext,
-) {
+export async function PUT(request: Request, { params }: RouteContext) {
   try {
+    const user = await getCurrentUser(request);
+
+    if (!user) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
     const { id } = await params;
     const body: CreateCharacterInput = await request.json();
 
     if (!id) {
-      return NextResponse.json(
-        {
-          error: "Character ID is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Character ID is required." },
         { status: 400 },
+      );
+    }
+
+    // Check ownership
+    const isOwner = await checkCharacterOwnership(id, user.id);
+    if (!isOwner) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Character not found." },
+        { status: 404 },
       );
     }
 
@@ -114,46 +132,36 @@ export async function PUT(
     // --------------------------------
 
     if (!name || typeof name !== "string" || !name.trim()) {
-      return NextResponse.json(
-        {
-          error: "Character name is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Character name is required." },
         { status: 400 },
       );
     }
 
     if (!race || typeof race !== "string") {
-      return NextResponse.json(
-        {
-          error: "Race is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Race is required." },
         { status: 400 },
       );
     }
 
     if (!characterClass || typeof characterClass !== "string") {
-      return NextResponse.json(
-        {
-          error: "Class is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Class is required." },
         { status: 400 },
       );
     }
 
     if (!alignment || typeof alignment !== "string") {
-      return NextResponse.json(
-        {
-          error: "Alignment is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Alignment is required." },
         { status: 400 },
       );
     }
 
     if (!background || typeof background !== "string") {
-      return NextResponse.json(
-        {
-          error: "Background is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Background is required." },
         { status: 400 },
       );
     }
@@ -206,7 +214,11 @@ export async function PUT(
         intelligence,
         wisdom,
         charisma,
+        inspiration,
+        speed,
+        temporary_hit_points,
         story,
+        user_id,
         created_at,
         updated_at
       `,
@@ -229,10 +241,8 @@ export async function PUT(
     );
 
     if (rows.length === 0) {
-      return NextResponse.json(
-        {
-          error: "Character not found.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Character not found." },
         { status: 404 },
       );
     }
@@ -241,10 +251,8 @@ export async function PUT(
   } catch (error) {
     console.error("PUT /api/characters/[id] error:", error);
 
-    return NextResponse.json(
-      {
-        error: "Failed to update character.",
-      },
+    return NextResponse.json<ApiResponse<null>>(
+      { success: false, error: "Failed to update character." },
       { status: 500 },
     );
   }
@@ -253,30 +261,52 @@ export async function PUT(
 /**
  * PATCH /api/characters/:id
  *
- * Partially update a character.
+ * Partially update a character (must belong to authenticated user).
  */
-export async function PATCH(
-  request: Request,
-  { params }: RouteContext,
-) {
+export async function PATCH(request: Request, { params }: RouteContext) {
   try {
+    const user = await getCurrentUser(request);
+
+    if (!user) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
     const { id } = await params;
     const body: Partial<CreateCharacterInput> = await request.json();
 
     if (!id) {
-      return NextResponse.json(
-        {
-          error: "Character ID is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Character ID is required." },
         { status: 400 },
       );
     }
 
     // --------------------------------
-    // Get current character
+    // Get current character (and verify ownership)
     // --------------------------------
 
-    const existingRows = await query(
+    const existingRows = await query<
+      {
+        id: string;
+        name: string;
+        race: string;
+        class: string;
+        level: number;
+        alignment: string;
+        background: string;
+        strength: number;
+        dexterity: number;
+        constitution: number;
+        intelligence: number;
+        wisdom: number;
+        charisma: number;
+        story: string | null;
+        user_id: string;
+      }
+    >(
       `
       SELECT
         id,
@@ -292,18 +322,17 @@ export async function PATCH(
         intelligence,
         wisdom,
         charisma,
-        story
+        story,
+        user_id
       FROM characters
-      WHERE id = $1
+      WHERE id = $1 AND user_id = $2
       `,
-      [id],
+      [id, user.id],
     );
 
     if (existingRows.length === 0) {
-      return NextResponse.json(
-        {
-          error: "Character not found.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Character not found." },
         { status: 404 },
       );
     }
@@ -314,35 +343,20 @@ export async function PATCH(
     // Merge values
     // --------------------------------
 
-    const name =
-      body.name !== undefined
-        ? body.name
-        : existing.name;
+    const name = body.name !== undefined ? body.name : existing.name;
 
-    const race =
-      body.race !== undefined
-        ? body.race
-        : existing.race;
+    const race = body.race !== undefined ? body.race : existing.race;
 
     const characterClass =
-      body.class !== undefined
-        ? body.class
-        : existing.class;
+      body.class !== undefined ? body.class : existing.class;
 
-    const level =
-      body.level !== undefined
-        ? body.level
-        : existing.level;
+    const level = body.level !== undefined ? body.level : existing.level;
 
     const alignment =
-      body.alignment !== undefined
-        ? body.alignment
-        : existing.alignment;
+      body.alignment !== undefined ? body.alignment : existing.alignment;
 
     const background =
-      body.background !== undefined
-        ? body.background
-        : existing.background;
+      body.background !== undefined ? body.background : existing.background;
 
     const abilities: Partial<Abilities> = body.abilities ?? {};
 
@@ -367,9 +381,7 @@ export async function PATCH(
         : existing.intelligence;
 
     const wisdom =
-      abilities.WIS !== undefined
-        ? Number(abilities.WIS)
-        : existing.wisdom;
+      abilities.WIS !== undefined ? Number(abilities.WIS) : existing.wisdom;
 
     const charisma =
       abilities.CHA !== undefined
@@ -385,62 +397,37 @@ export async function PATCH(
     // Validate merged data
     // --------------------------------
 
-    if (
-      typeof name !== "string" ||
-      !name.trim()
-    ) {
-      return NextResponse.json(
-        {
-          error: "Character name is required.",
-        },
+    if (typeof name !== "string" || !name.trim()) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Character name is required." },
         { status: 400 },
       );
     }
 
-    if (
-      typeof race !== "string" ||
-      !race
-    ) {
-      return NextResponse.json(
-        {
-          error: "Race is required.",
-        },
+    if (typeof race !== "string" || !race) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Race is required." },
         { status: 400 },
       );
     }
 
-    if (
-      typeof characterClass !== "string" ||
-      !characterClass
-    ) {
-      return NextResponse.json(
-        {
-          error: "Class is required.",
-        },
+    if (typeof characterClass !== "string" || !characterClass) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Class is required." },
         { status: 400 },
       );
     }
 
-    if (
-      typeof alignment !== "string" ||
-      !alignment
-    ) {
-      return NextResponse.json(
-        {
-          error: "Alignment is required.",
-        },
+    if (typeof alignment !== "string" || !alignment) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Alignment is required." },
         { status: 400 },
       );
     }
 
-    if (
-      typeof background !== "string" ||
-      !background
-    ) {
-      return NextResponse.json(
-        {
-          error: "Background is required.",
-        },
+    if (typeof background !== "string" || !background) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Background is required." },
         { status: 400 },
       );
     }
@@ -482,7 +469,11 @@ export async function PATCH(
         intelligence,
         wisdom,
         charisma,
+        inspiration,
+        speed,
+        temporary_hit_points,
         story,
+        user_id,
         created_at,
         updated_at
       `,
@@ -508,10 +499,8 @@ export async function PATCH(
   } catch (error) {
     console.error("PATCH /api/characters/[id] error:", error);
 
-    return NextResponse.json(
-      {
-        error: "Failed to partially update character.",
-      },
+    return NextResponse.json<ApiResponse<null>>(
+      { success: false, error: "Failed to partially update character." },
       { status: 500 },
     );
   }
@@ -520,20 +509,27 @@ export async function PATCH(
 /**
  * DELETE /api/characters/:id
  *
- * Delete a character.
+ * Delete a character (must belong to authenticated user).
  */
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: RouteContext,
 ) {
   try {
+    const user = await getCurrentUser(request);
+
+    if (!user) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
     const { id } = await params;
 
     if (!id) {
-      return NextResponse.json(
-        {
-          error: "Character ID is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Character ID is required." },
         { status: 400 },
       );
     }
@@ -541,22 +537,20 @@ export async function DELETE(
     const rows = await query(
       `
       DELETE FROM characters
-      WHERE id = $1
+      WHERE id = $1 AND user_id = $2
       RETURNING id, name
       `,
-      [id],
+      [id, user.id],
     );
 
     if (rows.length === 0) {
-      return NextResponse.json(
-        {
-          error: "Character not found.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Character not found." },
         { status: 404 },
       );
     }
 
-    return NextResponse.json({
+    return NextResponse.json<DeleteCharacterResponse>({
       success: true,
       message: "Character deleted successfully.",
       character: rows[0],
@@ -564,10 +558,8 @@ export async function DELETE(
   } catch (error) {
     console.error("DELETE /api/characters/[id] error:", error);
 
-    return NextResponse.json(
-      {
-        error: "Failed to delete character.",
-      },
+    return NextResponse.json<ApiResponse<null>>(
+      { success: false, error: "Failed to delete character." },
       { status: 500 },
     );
   }

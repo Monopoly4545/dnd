@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import {
   ArrowLeft,
   BookOpen,
@@ -80,8 +81,12 @@ export default async function CharacterDetails({
   let character: Character | null = null;
 
   try {
+    const requestHeaders = await headers();
     const response = await fetch(`http://localhost:3000/api/characters/${id}`, {
       cache: "no-store",
+      headers: {
+        cookie: requestHeaders.get("cookie") ?? "",
+      },
     });
 
     if (response.ok) {

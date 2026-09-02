@@ -6,9 +6,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Character, AbilityKey } from "@/types/type";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function CharacterList() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
 
   const [characters, setCharacters] = useState<Character[]>([]);
   const [search, setSearch] = useState("");
@@ -20,6 +22,15 @@ export default function CharacterList() {
   // --------------------------------
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+
     const loadCharacters = async () => {
       try {
         setLoading(true);
@@ -69,7 +80,7 @@ export default function CharacterList() {
     };
 
     loadCharacters();
-  }, []);
+  }, [authLoading, router, user]);
 
   // --------------------------------
   // Search

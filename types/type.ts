@@ -223,3 +223,41 @@ export type Pagination = {
   total: number;
   totalPages: number;
 };
+
+
+// ============================================================
+// Authentication Types
+// ============================================================
+
+export type User = {
+  id: string;
+  username: string;
+  email: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RegisterInput = {
+  username: string;
+  email: string;
+  password: string;
+};
+
+export type LoginInput = {
+  email: string;
+  password: string;
+};
+
+export type AuthResponse = {
+  success: boolean;
+  user?: User;
+  error?: string;
+  message?: string;
+};
+
+export type JWTPayload = {
+  userId: string;
+  email: string;
+  iat?: number;
+  exp?: number;
+};
