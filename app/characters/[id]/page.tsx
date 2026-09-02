@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import {
   ArrowLeft,
   BookOpen,
@@ -11,30 +12,33 @@ import {
   Trash2,
   Zap,
 } from "lucide-react";
+import type { Character, AbilityKey } from "@/types/type";
 
-type AbilityKey = "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
-
-type Character = {
-  id: string;
+type Skill = {
   name: string;
-  race: string;
-  class: string;
-  level: number;
-  alignment: string;
-  background: string;
-
-  strength: number;
-  dexterity: number;
-  constitution: number;
-  intelligence: number;
-  wisdom: number;
-  charisma: number;
-
-  story: string;
-
-  created_at: string;
-  updated_at: string;
+  ability: AbilityKey;
 };
+
+const skills: Skill[] = [
+  { name: "Acrobatics", ability: "DEX" },
+  { name: "Animal Handling", ability: "WIS" },
+  { name: "Arcana", ability: "INT" },
+  { name: "Athletics", ability: "STR" },
+  { name: "Deception", ability: "CHA" },
+  { name: "History", ability: "INT" },
+  { name: "Insight", ability: "WIS" },
+  { name: "Intimidation", ability: "CHA" },
+  { name: "Investigation", ability: "INT" },
+  { name: "Medicine", ability: "WIS" },
+  { name: "Nature", ability: "INT" },
+  { name: "Perception", ability: "WIS" },
+  { name: "Performance", ability: "CHA" },
+  { name: "Persuasion", ability: "CHA" },
+  { name: "Religion", ability: "INT" },
+  { name: "Sleight of Hand", ability: "DEX" },
+  { name: "Stealth", ability: "DEX" },
+  { name: "Survival", ability: "WIS" },
+];
 
 const abilityNames: Record<AbilityKey, string> = {
   STR: "Strength",
@@ -44,6 +48,18 @@ const abilityNames: Record<AbilityKey, string> = {
   WIS: "Wisdom",
   CHA: "Charisma",
 };
+
+const savingThrows: {
+  name: string;
+  ability: AbilityKey;
+}[] = [
+  { name: "Strength", ability: "STR" },
+  { name: "Dexterity", ability: "DEX" },
+  { name: "Constitution", ability: "CON" },
+  { name: "Intelligence", ability: "INT" },
+  { name: "Wisdom", ability: "WIS" },
+  { name: "Charisma", ability: "CHA" },
+];
 
 function getModifier(score: number) {
   return Math.floor((score - 10) / 2);
@@ -65,12 +81,13 @@ export default async function CharacterDetails({
   let character: Character | null = null;
 
   try {
-    const response = await fetch(
-      `http://localhost:3000/api/characters/${id}`,
-      {
-        cache: "no-store",
+    const requestHeaders = await headers();
+    const response = await fetch(`http://localhost:3000/api/characters/${id}`, {
+      cache: "no-store",
+      headers: {
+        cookie: requestHeaders.get("cookie") ?? "",
       },
-    );
+    });
 
     if (response.ok) {
       character = await response.json();
@@ -139,8 +156,7 @@ export default async function CharacterDetails({
    * Level 9-12 = +4
    * etc.
    */
-  const proficiencyBonus =
-    Math.ceil(character.level / 4) + 1;
+  const proficiencyBonus = 2 + Math.floor((character.level - 1) / 4);
 
   /*
    * Initiative = Dexterity modifier
@@ -153,8 +169,7 @@ export default async function CharacterDetails({
    * This is the base AC calculation.
    * Equipment / armor can be added later.
    */
-  const armorClass =
-    10 + getModifier(character.dexterity);
+  const armorClass = 10 + getModifier(character.dexterity);
 
   /*
    * Basic HP calculation.
@@ -165,13 +180,20 @@ export default async function CharacterDetails({
   const hitPoints =
     10 +
     getModifier(character.constitution) +
-    (character.level - 1) *
-      (6 + getModifier(character.constitution));
+    (character.level - 1) * (6 + getModifier(character.constitution));
+
+  /*
+   * Passive Perception
+   *
+   * Base passive Perception = 10 + Wisdom modifier.
+   * Proficiency will be added later when skill
+   * proficiencies are stored in the database.
+   */
+  const passivePerception = 10 + getModifier(character.wisdom);
 
   return (
     <main className="min-h-screen bg-[#0b0908] px-6 pb-20 pt-28 text-stone-100">
       <div className="mx-auto max-w-7xl">
-
         {/* ========================================= */}
         {/* TOP BAR                                   */}
         {/* ========================================= */}
@@ -213,7 +235,6 @@ export default async function CharacterDetails({
 
           <div className="relative p-6 sm:p-8 lg:p-10">
             <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-
               {/* Character Identity */}
               <div className="flex items-start gap-5">
                 <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/5">
@@ -230,9 +251,7 @@ export default async function CharacterDetails({
                   </h1>
 
                   <p className="mt-3 text-stone-400">
-                    Level {character.level}{" "}
-                    {character.race}{" "}
-                    {character.class}
+                    Level {character.level} {character.race} {character.class}
                   </p>
                 </div>
               </div>
@@ -259,20 +278,11 @@ export default async function CharacterDetails({
 
             {/* Character Metadata */}
             <div className="mt-8 grid gap-4 border-t border-stone-800 pt-8 sm:grid-cols-3">
-              <InfoItem
-                label="Race"
-                value={character.race}
-              />
+              <InfoItem label="Race" value={character.race} />
 
-              <InfoItem
-                label="Class"
-                value={character.class}
-              />
+              <InfoItem label="Class" value={character.class} />
 
-              <InfoItem
-                label="Alignment"
-                value={character.alignment}
-              />
+              <InfoItem label="Alignment" value={character.alignment} />
             </div>
           </div>
         </section>
@@ -281,7 +291,7 @@ export default async function CharacterDetails({
         {/* COMBAT STATS                              */}
         {/* ========================================= */}
 
-        <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
           <StatCard
             icon={<Heart className="h-5 w-5" />}
             label="Hit Points"
@@ -299,11 +309,7 @@ export default async function CharacterDetails({
           <StatCard
             icon={<Zap className="h-5 w-5" />}
             label="Initiative"
-            value={
-              initiative >= 0
-                ? `+${initiative}`
-                : `${initiative}`
-            }
+            value={initiative >= 0 ? `+${initiative}` : `${initiative}`}
             description="Dexterity"
           />
 
@@ -313,6 +319,34 @@ export default async function CharacterDetails({
             value={`+${proficiencyBonus}`}
             description="Proficiency bonus"
           />
+
+          <StatCard
+            icon={<Sparkles className="h-5 w-5" />}
+            label="Passive Perception"
+            value={String(passivePerception)}
+            description="Wisdom"
+          />
+
+          <StatCard
+            icon={<Sparkles className="h-5 w-5" />}
+            label="Inspiration"
+            value={character.inspiration ? "Yes" : "No"}
+            description="Character"
+          />
+
+          <StatCard
+            icon={<Swords className="h-5 w-5" />}
+            label="Speed"
+            value={`${character.speed} ft`}
+            description="Movement"
+          />
+
+          <StatCard
+            icon={<Heart className="h-5 w-5" />}
+            label="Temp HP"
+            value={String(character.temporary_hit_points)}
+            description="Temporary"
+          />
         </section>
 
         {/* ========================================= */}
@@ -320,10 +354,8 @@ export default async function CharacterDetails({
         {/* ========================================= */}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-
           {/* LEFT COLUMN */}
           <div className="space-y-6">
-
             {/* ========================================= */}
             {/* ABILITIES                                  */}
             {/* ========================================= */}
@@ -344,36 +376,34 @@ export default async function CharacterDetails({
               </div>
 
               <div className="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                {(Object.keys(abilities) as AbilityKey[]).map(
-                  (ability) => {
-                    const score = abilities[ability];
+                {(Object.keys(abilities) as AbilityKey[]).map((ability) => {
+                  const score = abilities[ability];
 
-                    return (
-                      <div
-                        key={ability}
-                        className="rounded-xl border border-stone-800 bg-[#0d0b0a] p-5 text-center"
-                      >
-                        <p className="text-xs font-semibold tracking-[0.2em] text-stone-600">
-                          {ability}
-                        </p>
+                  return (
+                    <div
+                      key={ability}
+                      className="rounded-xl border border-stone-800 bg-[#0d0b0a] p-5 text-center"
+                    >
+                      <p className="text-xs font-semibold tracking-[0.2em] text-stone-600">
+                        {ability}
+                      </p>
 
-                        <p className="mt-2 text-xs text-stone-500">
-                          {abilityNames[ability]}
-                        </p>
+                      <p className="mt-2 text-xs text-stone-500">
+                        {abilityNames[ability]}
+                      </p>
 
-                        <div className="mx-auto mt-4 flex h-14 w-14 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/5">
-                          <span className="font-serif text-2xl font-bold text-amber-400">
-                            {score}
-                          </span>
-                        </div>
-
-                        <p className="mt-3 text-sm font-semibold text-stone-400">
-                          {formatModifier(score)}
-                        </p>
+                      <div className="mx-auto mt-4 flex h-14 w-14 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/5">
+                        <span className="font-serif text-2xl font-bold text-amber-400">
+                          {score}
+                        </span>
                       </div>
-                    );
-                  },
-                )}
+
+                      <p className="mt-3 text-sm font-semibold text-stone-400">
+                        {formatModifier(score)}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </section>
 
@@ -382,45 +412,111 @@ export default async function CharacterDetails({
             {/* ========================================= */}
 
             <section className="rounded-2xl border border-stone-800 bg-[#12100f] p-6 sm:p-8">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-500">
-                  Skills
-                </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-500">
+                    Skills
+                  </p>
 
-                <h2 className="mt-2 font-serif text-2xl font-bold">
-                  Ability Modifiers
-                </h2>
+                  <h2 className="mt-2 font-serif text-2xl font-bold">
+                    Skills & Proficiencies
+                  </h2>
+                </div>
+
+                <Sparkles className="h-5 w-5 text-stone-700" />
               </div>
 
               <div className="mt-7 grid gap-2 sm:grid-cols-2">
-                {(Object.keys(abilities) as AbilityKey[]).map(
-                  (ability) => (
-                    <div
-                      key={ability}
-                      className="flex items-center justify-between rounded-lg border border-stone-800 bg-[#0d0b0a] px-4 py-3"
-                    >
-                      <div>
-                        <p className="text-sm text-stone-300">
-                          {abilityNames[ability]}
-                        </p>
+                {skills.map((skill) => {
+                  const modifier = getModifier(abilities[skill.ability]);
 
-                        <p className="mt-0.5 text-xs text-stone-600">
-                          {ability}
-                        </p>
+                  return (
+                    <div
+                      key={skill.name}
+                      className="group flex items-center justify-between rounded-lg border border-stone-800 bg-[#0d0b0a] px-4 py-3 transition hover:border-amber-500/20 hover:bg-amber-500/[0.02]"
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Proficiency indicator */}
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full border border-stone-700">
+                          <div className="h-2 w-2 rounded-full bg-stone-800 transition group-hover:bg-amber-500/40" />
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-medium text-stone-300">
+                            {skill.name}
+                          </p>
+
+                          <p className="mt-0.5 text-xs text-stone-600">
+                            {skill.ability} · {abilityNames[skill.ability]}
+                          </p>
+                        </div>
                       </div>
 
                       <span className="font-semibold text-amber-400">
-                        {formatModifier(abilities[ability])}
+                        {modifier >= 0 ? `+${modifier}` : modifier}
                       </span>
                     </div>
-                  ),
-                )}
+                  );
+                })}
               </div>
             </section>
           </div>
 
           {/* RIGHT COLUMN */}
           <div className="space-y-6">
+            {/* ========================================= */}
+            {/* SAVING THROWS                             */}
+            {/* ========================================= */}
+
+            <section className="rounded-2xl border border-stone-800 bg-[#12100f] p-6 sm:p-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-500">
+                    Saving Throws
+                  </p>
+
+                  <h2 className="mt-2 font-serif text-2xl font-bold">
+                    Saving Throws
+                  </h2>
+                </div>
+
+                <Shield className="h-5 w-5 text-stone-700" />
+              </div>
+
+              <div className="mt-7 grid gap-2 sm:grid-cols-2">
+                {savingThrows.map((savingThrow) => {
+                  const modifier = getModifier(abilities[savingThrow.ability]);
+
+                  return (
+                    <div
+                      key={savingThrow.ability}
+                      className="group flex items-center justify-between rounded-lg border border-stone-800 bg-[#0d0b0a] px-4 py-3 transition hover:border-amber-500/20 hover:bg-amber-500/[0.02]"
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Proficiency indicator */}
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full border border-stone-700">
+                          <div className="h-2 w-2 rounded-full bg-stone-800 transition group-hover:bg-amber-500/40" />
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-medium text-stone-300">
+                            {savingThrow.name}
+                          </p>
+
+                          <p className="mt-0.5 text-xs text-stone-600">
+                            {savingThrow.ability}
+                          </p>
+                        </div>
+                      </div>
+
+                      <span className="font-semibold text-amber-400">
+                        {modifier >= 0 ? `+${modifier}` : modifier}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
 
             {/* ========================================= */}
             {/* BACKGROUND                                */}
@@ -480,13 +576,11 @@ export default async function CharacterDetails({
               </p>
 
               <p className="mt-4 text-sm leading-7 text-stone-400">
-                {character.name} is a level{" "}
-                {character.level}{" "}
-                {character.race.toLowerCase()}{" "}
-                {character.class.toLowerCase()} with a{" "}
-                {character.alignment.toLowerCase()} alignment.
-                Their journey begins with the{" "}
-                {character.background.toLowerCase()} background.
+                {character.name} is a level {character.level}{" "}
+                {character.race.toLowerCase()} {character.class.toLowerCase()}{" "}
+                with a {character.alignment.toLowerCase()} alignment. Their
+                journey begins with the {character.background.toLowerCase()}{" "}
+                background.
               </p>
             </section>
           </div>
@@ -522,22 +616,14 @@ export default async function CharacterDetails({
 /* INFO ITEM                                         */
 /* ================================================= */
 
-function InfoItem({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-xs uppercase tracking-[0.2em] text-stone-600">
         {label}
       </p>
 
-      <p className="mt-2 text-sm font-medium text-stone-300">
-        {value}
-      </p>
+      <p className="mt-2 text-sm font-medium text-stone-300">{value}</p>
     </div>
   );
 }

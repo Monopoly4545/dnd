@@ -14,19 +14,10 @@ import {
   Swords,
   WandSparkles,
 } from "lucide-react";
+import type { AbilityKey, Abilities, CharacterFormData } from "@/types/type";
 
-type AbilityKey = "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
-
-type Character = {
+type EditCharacter = CharacterFormData & {
   id: string;
-  name: string;
-  race: string;
-  class: string;
-  level: number;
-  alignment: string;
-  background: string;
-  story: string;
-  abilities: Record<AbilityKey, number>;
 };
 
 const steps = [
@@ -149,7 +140,7 @@ export default function EditCharacterPage() {
 
   const id = params.id as string;
 
-  const [character, setCharacter] = useState<Character | null>(null);
+  const [character, setCharacter] = useState<EditCharacter | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -193,9 +184,9 @@ export default function EditCharacterPage() {
     }
   }, [id]);
 
-  function updateField<K extends keyof Character>(
+  function updateField<K extends keyof EditCharacter>(
     field: K,
-    value: Character[K],
+    value: EditCharacter[K],
   ) {
     setCharacter((current) =>
       current
@@ -208,7 +199,7 @@ export default function EditCharacterPage() {
   }
 
   function updateAbility(
-    ability: AbilityKey,
+    ability: keyof Abilities,
     value: number,
   ) {
     setCharacter((current) =>

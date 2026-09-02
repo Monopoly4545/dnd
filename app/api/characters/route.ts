@@ -1,32 +1,26 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-
-type CreateCharacterBody = {
-  name?: string;
-  race?: string;
-  class?: string;
-  level?: number;
-  alignment?: string;
-  background?: string;
-  abilities?: {
-    STR?: number;
-    DEX?: number;
-    CON?: number;
-    INT?: number;
-    WIS?: number;
-    CHA?: number;
-  };
-  story?: string;
-};
+import { getCurrentUser } from "@/lib/authHelpers";
+import type { CreateCharacterInput, Abilities, ApiResponse } from "@/types/type";
 
 /**
  * GET /api/characters
  *
- * Get all characters.
+ * Get all characters for the authenticated user.
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const characters = await query(`
+    const user = await getCurrentUser(request);
+
+    if (!user) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
+    const characters = await query(
+      `
       SELECT
         id,
         name,
@@ -41,21 +35,26 @@ export async function GET() {
         intelligence,
         wisdom,
         charisma,
+        inspiration,
+        speed,
+        temporary_hit_points,
         story,
+        user_id,
         created_at,
         updated_at
       FROM characters
+      WHERE user_id = $1
       ORDER BY created_at DESC
-    `);
+      `,
+      [user.id],
+    );
 
     return NextResponse.json(characters);
   } catch (error) {
     console.error("GET /api/characters error:", error);
 
-    return NextResponse.json(
-      {
-        error: "Failed to fetch characters.",
-      },
+    return NextResponse.json<ApiResponse<null>>(
+      { success: false, error: "Failed to fetch characters." },
       { status: 500 },
     );
   }
@@ -64,11 +63,20 @@ export async function GET() {
 /**
  * POST /api/characters
  *
- * Create a new character.
+ * Create a new character for the authenticated user.
  */
 export async function POST(request: Request) {
   try {
-    const body: CreateCharacterBody = await request.json();
+    const user = await getCurrentUser(request);
+
+    if (!user) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
+    const body: CreateCharacterInput = await request.json();
 
     const {
       name,
@@ -86,46 +94,36 @@ export async function POST(request: Request) {
     // --------------------------------
 
     if (!name || typeof name !== "string" || !name.trim()) {
-      return NextResponse.json(
-        {
-          error: "Character name is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Character name is required." },
         { status: 400 },
       );
     }
 
     if (!race || typeof race !== "string") {
-      return NextResponse.json(
-        {
-          error: "Race is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Race is required." },
         { status: 400 },
       );
     }
 
     if (!characterClass || typeof characterClass !== "string") {
-      return NextResponse.json(
-        {
-          error: "Class is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Class is required." },
         { status: 400 },
       );
     }
 
     if (!alignment || typeof alignment !== "string") {
-      return NextResponse.json(
-        {
-          error: "Alignment is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Alignment is required." },
         { status: 400 },
       );
     }
 
     if (!background || typeof background !== "string") {
-      return NextResponse.json(
-        {
-          error: "Background is required.",
-        },
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "Background is required." },
         { status: 400 },
       );
     }
@@ -160,7 +158,8 @@ export async function POST(request: Request) {
         intelligence,
         wisdom,
         charisma,
-        story
+        story,
+        user_id
       )
       VALUES (
         $1,
@@ -175,7 +174,8 @@ export async function POST(request: Request) {
         $10,
         $11,
         $12,
-        $13
+        $13,
+        $14
       )
       RETURNING
         id,
@@ -191,7 +191,11 @@ export async function POST(request: Request) {
         intelligence,
         wisdom,
         charisma,
+        inspiration,
+        speed,
+        temporary_hit_points,
         story,
+        user_id,
         created_at,
         updated_at
       `,
@@ -209,6 +213,7 @@ export async function POST(request: Request) {
         wisdom,
         charisma,
         story?.trim() || null,
+        user.id,
       ],
     );
 
@@ -218,10 +223,8 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("POST /api/characters error:", error);
 
-    return NextResponse.json(
-      {
-        error: "Failed to create character.",
-      },
+    return NextResponse.json<ApiResponse<null>>(
+      { success: false, error: "Failed to create character." },
       { status: 500 },
     );
   }

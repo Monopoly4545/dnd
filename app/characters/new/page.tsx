@@ -15,6 +15,8 @@ import {
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
+import type { Abilities, CharacterFormData } from "@/types/type";
+
 import {
   abilityScores,
   alignments,
@@ -26,32 +28,12 @@ import {
 
 const steps = ["Basic Info", "Race & Class", "Abilities", "Background"];
 
-type Abilities = {
-  STR: number;
-  DEX: number;
-  CON: number;
-  INT: number;
-  WIS: number;
-  CHA: number;
-};
-
-type Character = {
-  name: string;
-  race: string;
-  class: string;
-  level: number;
-  alignment: string;
-  background: string;
-  abilities: Abilities;
-  story: string;
-};
-
 export default function CreateCharacter() {
   const router = useRouter();
 
   const [step, setStep] = useState(0);
 
-  const [character, setCharacter] = useState<Character>({
+  const [character, setCharacter] = useState<CharacterFormData>({
     name: "",
     race: "",
     class: "",
@@ -75,7 +57,7 @@ export default function CreateCharacter() {
   /* Update Character                  */
   /* -------------------------------- */
 
-  const updateCharacter = (key: keyof Character, value: string | number) => {
+  const updateCharacter = (key: keyof CharacterFormData, value: string | number) => {
     setCharacter((current) => ({
       ...current,
       [key]: value,
